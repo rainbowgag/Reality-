@@ -104,6 +104,95 @@ normalize_sni() {
   printf '%s' "$s"
 }
 
+get_country_code() {
+  local ip="$1"
+  local cc=""
+
+  cc="$(fetch_url "https://ipinfo.io/${ip}/json" 2>/dev/null | sed -nE 's/.*"country"[[:space:]]*:[[:space:]]*"([A-Za-z]{2})".*/\1/p' | head -n1 || true)"
+  if [ -z "$cc" ]; then
+    cc="$(fetch_url "https://ipapi.co/${ip}/json/" 2>/dev/null | sed -nE 's/.*"country_code"[[:space:]]*:[[:space:]]*"([A-Za-z]{2})".*/\1/p' | head -n1 || true)"
+  fi
+  if [ -z "$cc" ]; then
+    cc="$(fetch_url "https://ipwho.is/${ip}" 2>/dev/null | sed -nE 's/.*"country_code"[[:space:]]*:[[:space:]]*"([A-Za-z]{2})".*/\1/p' | head -n1 || true)"
+  fi
+  if [ -z "$cc" ]; then
+    cc="$(fetch_url "http://ip-api.com/json/${ip}?fields=status,countryCode" 2>/dev/null | sed -nE 's/.*"countryCode"[[:space:]]*:[[:space:]]*"([A-Za-z]{2})".*/\1/p' | head -n1 || true)"
+  fi
+
+  printf '%s' "$(printf '%s' "$cc" | tr '[:lower:]' '[:upper:]')"
+}
+
+get_sni_candidates() {
+  case "$1" in
+    US)
+      echo "computerhistory.org www.exploratorium.edu www.cmog.org www.thehenryford.org www.museumofplay.org www.montereybayaquarium.org"
+      ;;
+    GB)
+      echo "www.railwaymuseum.org.uk www.scienceandmediamuseum.org.uk www.wealddown.co.uk www.rmg.co.uk www.nationaltrust.org.uk"
+      ;;
+    DE)
+      echo "www.technik-museum.de www.phaeno.de www.dasa-dortmund.de www.museumfuernaturkunde.berlin www.senckenberg.de"
+      ;;
+    JP)
+      echo "www.kobe-oukoku.com kyotomm.jp www.tepia.jp www.kaiyukan.com www.ghibli-museum.jp"
+      ;;
+    KR)
+      echo "www.sciencecenter.go.kr www.samsung.com"
+      ;;
+    FR)
+      echo "www.cite-espace.com www.musee-marine.fr museedesconfluences.fr"
+      ;;
+    SG)
+      echo "www.science.edu.sg www.peranakanmuseum.nhb.gov.sg www.nationalgallery.sg www.gardensbythebay.com.sg"
+      ;;
+    MY)
+      echo "iamm.org.my www.royalselangor.com museumvolunteersjmm.com www.gamudaland.com.my"
+      ;;
+    TW)
+      echo "beitoumuseum.org.tw www.huashan1914.com www.opentix.life www.nmtl.gov.tw www.ntm.gov.tw www.ntmofa.gov.tw www.nmp.gov.tw"
+      ;;
+    HK)
+      echo "www.kfbg.org hk.science.museum www.hkmemory.hk www.mplus.org.hk"
+      ;;
+    *)
+      echo "lightnode.com inet.ws"
+      ;;
+  esac
+}
+
+measure_latency() {
+  local domain="$1"
+  local out ms
+  out="$(curl -4s --connect-timeout 2 --max-time 4 -o /dev/null -w '%{time_connect}' "https://${domain}/" 2>/dev/null || true)"
+  ms="$(printf '%s' "$out" | awk '{printf "%.0f", $1 * 1000}' 2>/dev/null || true)"
+  if [[ "$ms" =~ ^[0-9]+$ ]] && [ "$ms" -gt 0 ]; then
+    printf '%s' "$ms"
+  else
+    printf ''
+  fi
+}
+
+select_default_sni() {
+  local candidates best best_ms domain ms
+  candidates="$(get_sni_candidates "$1")"
+  best=""
+  best_ms=999999
+
+  for domain in $candidates; do
+    domain="$(normalize_sni "$domain")"
+    ms="$(measure_latency "$domain")"
+    if [ -n "$ms" ] && [ "$ms" -lt "$best_ms" ]; then
+      best="$domain"
+      best_ms="$ms"
+    fi
+  done
+
+  if [ -z "$best" ]; then
+    best="$(printf '%s' "$candidates" | awk '{print $1}')"
+  fi
+  printf '%s' "$best"
+}
+
 make_server_names() {
   local s="$SNI"
   if [[ "$s" != www.* ]]; then
@@ -436,12 +525,24 @@ do_install() {
   read -rp "节点名称 [${default_ip}]：" NODE_NAME
   NODE_NAME="${NODE_NAME:-$default_ip}"
 
-  read -rp "SNI 域名 [sony.com]：" SNI
-  SNI="$(normalize_sni "${SNI:-sony.com}")"
+  local country_code default_sni
+  country_code="$(get_country_code "$default_ip")"
+  default_sni="$(select_default_sni "${country_code:-OTHER}")"
+  if [ -z "$default_sni" ]; then
+    default_sni="sony.com"
+  fi
+  if [ -n "$country_code" ]; then
+    log "检测到服务器 IP 归属：${country_code}，已自动选择默认 SNI：${default_sni}"
+  else
+    log "未识别到 IP 归属国家，使用默认 SNI：${default_sni}"
+  fi
+
+  read -rp "SNI 域名 [${default_sni}]：" SNI
+  SNI="$(normalize_sni "${SNI:-$default_sni}")"
   while [ -z "$SNI" ]; do
     warn "SNI 域名不能为空。"
-    read -rp "SNI 域名 [sony.com]：" SNI
-    SNI="$(normalize_sni "${SNI:-sony.com}")"
+    read -rp "SNI 域名 [${default_sni}]：" SNI
+    SNI="$(normalize_sni "${SNI:-$default_sni}")"
   done
 
   read -rp "端口 [443]：" PORT

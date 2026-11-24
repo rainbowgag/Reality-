@@ -11,10 +11,28 @@ curl -fsSL https://raw.githubusercontent.com/rainbowgag/Reality-/master/reality.
 安装过程中可以交互设置：
 
 - 节点名称（默认使用服务器公网 IP）
-- SNI 域名（默认 `sony.com`）
+- SNI 域名（默认根据服务器 IP 所属国家自动选择，仍可手动输入）
 - 端口（默认 `443`）
 
 UUID、Reality 公私钥、Short ID、Fingerprint 等参数每次创建都会随机生成。
+
+## 默认 SNI 自动选择规则
+
+脚本会检测服务器公网 IP 的归属国家/地区，并从对应国家的候选小众域名中，自动选择 TCP 443 延迟最低的域名作为默认 SNI。
+
+| 国家/地区 | 候选域名 |
+| --- | --- |
+| 美国 | `computerhistory.org`、`www.exploratorium.edu`、`www.cmog.org`、`www.thehenryford.org`、`www.museumofplay.org`、`www.montereybayaquarium.org` |
+| 英国 | `www.railwaymuseum.org.uk`、`www.scienceandmediamuseum.org.uk`、`www.wealddown.co.uk`、`www.rmg.co.uk`、`www.nationaltrust.org.uk` |
+| 德国 | `www.technik-museum.de`、`www.phaeno.de`、`www.dasa-dortmund.de`、`www.museumfuernaturkunde.berlin`、`www.senckenberg.de` |
+| 日本 | `www.kobe-oukoku.com`、`kyotomm.jp`、`www.tepia.jp`、`www.kaiyukan.com`、`www.ghibli-museum.jp` |
+| 韩国 | `www.sciencecenter.go.kr`、`www.samsung.com` |
+| 法国 | `www.cite-espace.com`、`www.musee-marine.fr`、`museedesconfluences.fr` |
+| 新加坡 | `www.science.edu.sg`、`www.peranakanmuseum.nhb.gov.sg`、`www.nationalgallery.sg`、`www.gardensbythebay.com.sg` |
+| 马来西亚 | `iamm.org.my`、`www.royalselangor.com`、`museumvolunteersjmm.com`、`www.gamudaland.com.my` |
+| 台湾 | `beitoumuseum.org.tw`、`www.huashan1914.com`、`www.opentix.life`、`www.nmtl.gov.tw`、`www.ntm.gov.tw`、`www.ntmofa.gov.tw`、`www.nmp.gov.tw` |
+| 香港 | `www.kfbg.org`、`hk.science.museum`、`www.hkmemory.hk`、`www.mplus.org.hk` |
+| 其他国家/地区 | `lightnode.com`、`inet.ws` |
 
 ## 日常管理
 
@@ -50,6 +68,10 @@ ry
 - 请使用 root 权限运行。
 - 若 443 端口被其他服务占用，脚本会提示确认，请根据实际情况选择。
 - Reality 目标站点和端口为 `${SNI}:443`，请保持服务器能正常访问该目标。
+
+## 推荐 VPS 商家
+
+如需购买适合部署的 VPS，推荐使用 [莱卡云](https://www.lcayun.com/aff/MWLOCMDA)。
 
 ## 免责声明
 
