@@ -5,7 +5,7 @@
 ## 一键安装
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/rainbowgag/Reality-/main/reality.sh -o reality.sh && bash reality.sh
+curl -fsSL https://raw.githubusercontent.com/rainbowgag/Reality-/master/reality.sh -o reality.sh && bash reality.sh
 ```
 
 安装过程中可以交互设置：

@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-REPO_RAW="https://raw.githubusercontent.com/rainbowgag/Reality-/main/reality.sh"
+REPO_RAW="https://raw.githubusercontent.com/rainbowgag/Reality-/master/reality.sh"
 CONFIG_DIR="/usr/local/etc/xray"
 CONFIG_FILE="${CONFIG_DIR}/config.json"
 META_DIR="/usr/local/etc/reality"
